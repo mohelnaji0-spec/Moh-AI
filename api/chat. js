@@ -1,0 +1,61 @@
+// api/chat.js
+const Groq = require('groq-sdk');
+
+// تهيئة العميل باستخدام المفتاح من متغيرات البيئة
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
+
+module.exports = async (req, res) => {
+  // 1. السماح بـ CORS (للتأكد من عمل الطلبات)
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
+  // 2. التأكد من أن الطلب هو POST
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'الطريقة غير مدعومة. استخدم POST.' });
+  }
+
+  // 3. استخراج الرسالة من الطلب
+  const { message } = req.body;
+  if (!message) {
+    return res.status(400).json({ error: 'الرجاء إدخال نص السؤال.' });
+  }
+
+  try {
+    // 4. الاتصال بـ Groq API
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: 'أنت مساعد ذكي يُدعى "Moh AI"، أجب باللغة العربية الفصحى بوضوح وإيجاز.' },
+        { role: 'user', content: message }
+      ],
+      model: 'llama-3.3-70b-versatile', // تأكد من صحة النموذج
+      temperature: 0.7,
+      max_tokens: 1024,
+    });
+
+    const reply = chatCompletion.choices[0]?.message?.content || 'عذراً، لم أستطع توليد رد هذه المرة.';
+
+    // 5. إعادة الرد بنجاح
+    return res.status(200).json({ reply });
+
+  } catch (error) {
+    // *** معالجة الأخطاء بشكل احترافي (لن تتوقف عند "جاري...") ***
+    console.error('خطأ في Groq:', error);
+
+    let errorMessage = 'حدث عطل داخلي في الخادم. حاول مجدداً.';
+    if (error.status === 401) {
+      errorMessage = 'مفتاح API غير صالح أو منتهي. يرجى تحديثه في إعدادات Vercel.';
+    } else if (error.status === 429) {
+      errorMessage = 'تم تجاوز حد الاستخدام المجاني. انتظر دقيقة ثم حاول.';
+    } else if (error.status === 404) {
+      errorMessage = 'النموذج المطلوب غير موجود. تحقق من اسم النموذج.';
+    }
+
+    return res.status(error.status || 500).json({ error: errorMessage });
+  }
+};
