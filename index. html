@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Moh AI 🤖</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+        body {
+            background: #0f0f1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 720px;
+            height: 92vh;
+            background: #1a1a2e;
+            border-radius: 32px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+            border: 1px solid #2d2d4a;
+        }
+        .header {
+            padding: 22px 20px;
+            background: #12121f;
+            border-bottom: 1px solid #2d2d4a;
+            text-align: center;
+            color: #fff;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        .header span { color: #a78bfa; }
+        .header small { font-size: 14px; font-weight: 400; color: #6a6a8a; margin-right: 8px; }
+
+        .chat-box {
+            flex: 1;
+            padding: 20px 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .message {
+            max-width: 80%;
+            padding: 12px 18px;
+            border-radius: 20px;
+            font-size: 15px;
+            line-height: 1.7;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        .user {
+            align-self: flex-end;
+            background: #a78bfa;
+            color: #fff;
+            border-bottom-left-radius: 6px;
+        }
+        .bot {
+            align-self: flex-start;
+            background: #2a2a44;
+            color: #e4e4f0;
+            border-bottom-right-radius: 6px;
+        }
+        .error-msg {
+            align-self: flex-start;
+            background: #4a1515;
+            color: #fca5a5;
+            border: 1px solid #a11f1f;
+            border-bottom-right-radius: 6px;
+            max-width: 90%;
+        }
+
+        .loading {
+            align-self: flex-start;
+            background: #2a2a44;
+            color: #a0a0c0;
+            padding: 12px 18px;
+            border-radius: 20px;
+            border-bottom-right-radius: 6px;
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            font-size: 15px;
+        }
+        .dot { animation: blink 1.4s infinite; font-size: 22px; line-height: 1; }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes blink { 0%, 60%, 100% { opacity: 0.15; } 30% { opacity: 1; } }
+
+        .input-area {
+            padding: 16px 20px 20px;
+            background: #12121f;
+            border-top: 1px solid #2d2d4a;
+            display: flex;
+            gap: 12px;
+        }
+        .input-area input {
+            flex: 1;
+            padding: 14px 20px;
+            border: 1px solid #3a3a5a;
+            border-radius: 40px;
+            background: #08080f;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            transition: 0.25s;
+        }
+        .input-area input:focus { border-color: #a78bfa; box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.15); }
+        .input-area input::placeholder { color: #555577; }
+        .input-area input:disabled { opacity: 0.5; }
+
+        .input-area button {
+            background: #a78bfa;
+            border: none;
+            color: #0f0f1a;
+            width: 54px;
+            border-radius: 40px;
+            font-size: 24px;
+            cursor: pointer;
+            transition: 0.25s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+        .input-area button:hover { background: #8b6fdc; transform: scale(1.02); }
+        .input-area button:disabled { opacity: 0.4; cursor: not-allowed; transform: scale(1); }
+
+        .chat-box::-webkit-scrollbar { width: 5px; }
+        .chat-box::-webkit-scrollbar-track { background: #12121f; }
+        .chat-box::-webkit-scrollbar-thumb { background: #3a3a5a; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        🤖 <span>Moh</span> AI <small>v1.0</small>
+    </div>
+    <div class="chat-box" id="chatBox">
+        <div class="message bot">مرحباً! أنا <strong>Moh AI</strong>، اسألني عن أي شيء وسأجيبك بكل سرور 🚀</div>
+    </div>
+    <div class="input-area">
+        <input type="text" id="userInput" placeholder="اكتب سؤالك هنا..." />
+        <button id="sendBtn">➤</button>
+    </div>
+</div>
+
+<script>
+    const chatBox = document.getElementById('chatBox');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    function addMessage(text, type, isError = false) {
+        const div = document.createElement('div');
+        div.className = `message ${type}`;
+        if (isError) div.classList.add('error-msg');
+        div.textContent = text;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        return div;
+    }
+
+    function showLoading() {
+        const div = document.createElement('div');
+        div.className = 'loading';
+        div.id = 'loadingIndicator';
+        div.innerHTML = 'جاري التفكير <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>';
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        return div;
+    }
+
+    function removeLoading() {
+        const loader = document.getElementById('loadingIndicator');
+        if (loader) loader.remove();
+    }
+
+    async function sendMessage() {
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        sendBtn.disabled = true;
+        userInput.disabled = true;
+
+        addMessage(message, 'user');
+        userInput.value = '';
+        showLoading();
+
+        try {
+            // الاتصال بالـ API عبر المسار النسبي (يعمل محلياً وعلى Vercel)
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message })
+            });
+
+            const data = await response.json();
+            removeLoading();
+
+            if (!response.ok) {
+                const errorText = data.error || 'حدث خطأ غير معروف.';
+                addMessage(`⚠️ ${errorText}`, 'bot', true);
+                return;
+            }
+
+            if (data.reply) {
+                addMessage(data.reply, 'bot');
+            } else {
+                addMessage('⚠️ عذراً، لم أستلم رداً صالحاً من الخادم.', 'bot', true);
+            }
+
+        } catch (error) {
+            // *** الحل النهائي لمشكلة التوقف ***
+            removeLoading();
+            console.error('فشل الاتصال:', error);
+            addMessage('⚠️ تعذر الاتصال بالخادم. تأكد من اتصالك بالإنترنت أو حاول لاحقاً.', 'bot', true);
+        } finally {
+            sendBtn.disabled = false;
+            userInput.disabled = false;
+            userInput.focus();
+        }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    userInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+</script>
+</body>
+</html>
